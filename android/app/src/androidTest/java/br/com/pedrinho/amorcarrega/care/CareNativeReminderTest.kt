@@ -3,6 +3,8 @@ package br.com.pedrinho.amorcarrega.care
 import android.app.*
 import android.content.*
 import android.net.Uri
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.*
 import androidx.room.withTransaction
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,6 +30,7 @@ class CareNativeReminderTest {
         val manager = context.getSystemService(NotificationManager::class.java)
         val wifi = shell("settings get global wifi_on").trim()
         val data = shell("settings get global mobile_data").trim()
+        val wasInteractive = context.getSystemService(PowerManager::class.java).isInteractive
         var id = 0L
         var dose: Occurrence? = null
         try {
@@ -43,6 +46,12 @@ class CareNativeReminderTest {
                 assertTrue(CareAlarms.exactAllowed(context))
             }
             CareAlarms.reschedule(context)
+            shell("input keyevent KEYCODE_SLEEP")
+            val sleepDeadline = SystemClock.elapsedRealtime() + 5000
+            while (context.getSystemService(PowerManager::class.java).isInteractive && SystemClock.elapsedRealtime() < sleepDeadline) {
+                SystemClock.sleep(100)
+            }
+            assertFalse("Screen must be off during native alarm delivery", context.getSystemService(PowerManager::class.java).isInteractive)
             val deadline = SystemClock.elapsedRealtime() + Duration.between(Instant.now(), target.toInstant()).toMillis().coerceAtLeast(0) + 90000
             var notification = manager.activeNotifications.firstOrNull { it.tag == "care:${dose.key}" }
             while (notification == null && SystemClock.elapsedRealtime() < deadline) {
@@ -52,6 +61,12 @@ class CareNativeReminderTest {
             assertNotNull("Native offline reminder was not delivered", notification)
             assertEquals(Notification.CATEGORY_REMINDER, notification!!.notification.category)
             assertEquals(0, notification.notification.flags and Notification.FLAG_INSISTENT)
+            val channel = manager.getNotificationChannel(notification.notification.channelId)
+            assertEquals("Run with medication sound enabled and a non-muted test channel",
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), channel.sound)
+            assertEquals(AudioAttributes.USAGE_ALARM, channel.audioAttributes.usage)
+            assertEquals(AudioAttributes.CONTENT_TYPE_SONIFICATION, channel.audioAttributes.contentType)
+            assertNotEquals(0, notification.notification.flags and Notification.FLAG_ONLY_ALERT_ONCE)
             assertTrue("A reminder must not confirm administration", store.snapshot().records.none { it.medicineId == id })
             store.confirm(dose, "quantidade realmente informada", LocalDate.now(), LocalTime.now().withSecond(0).withNano(0))
             CareAlarms.cancelNotification(context, dose.key); CareAlarms.reschedule(context)
@@ -73,6 +88,7 @@ class CareNativeReminderTest {
             }
             if (wifi == "1") shell("svc wifi enable")
             if (data == "1") shell("svc data enable")
+            if (wasInteractive) shell("input keyevent KEYCODE_WAKEUP")
         }
     }
 }
