@@ -71,27 +71,32 @@ object CareAlarms {
     }.getOrNull()
 
     suspend fun deliver(context: Context, key: String) = withContext(Dispatchers.IO) {
-        mutex.withLock {
+        val soundChannel = mutex.withLock {
             val snapshot = CareStore.get(context).snapshot()
             val dose = occurrence(snapshot, key)
             try {
                 if (dose != null && dose.medicine.archivedAt == null && key !in snapshot.confirmedKeys &&
                     !dose.instant(ZoneId.systemDefault()).isAfter(Instant.now().plusSeconds(1))) {
+                    val alreadyVisible = context.getSystemService(NotificationManager::class.java)
+                        .activeNotifications.any { it.tag == "care:$key" }
                     show(context, dose)
-                }
+                    if (alreadyVisible) null else channelId(context)
+                } else null
             } finally {
                 // A notification permission/channel error must not stop the recurring schedule.
                 scheduleSnapshot(context, snapshot)
             }
         }
+        // Keep goAsync alive while playing, but do not hold the scheduling mutex for audio.
+        // Simultaneous reminders share one short clip rather than queueing/overlapping sounds.
+        if (soundChannel != null) CareReminderSound.play(context, soundChannel)
     }
     fun cancelNotification(context: Context, key: String) =
         context.getSystemService(NotificationManager::class.java).cancel("care:$key", NOTIFICATION_ID)
 
     fun channelId(context: Context): String {
         val prefs = preferences(context)
-        // Channel audio is immutable after creation: do not reuse the TYPE_NOTIFICATION channel.
-        return "care_alarm_v2_s${if (prefs.getBoolean("sound", true)) 1 else 0}_v${if (prefs.getBoolean("vibration", true)) 1 else 0}"
+        return "care_direct_v3_s${if (prefs.getBoolean("sound", true)) 1 else 0}_v${if (prefs.getBoolean("vibration", true)) 1 else 0}"
     }
     fun ensureChannel(context: Context): String {
         val prefs = preferences(context)
@@ -101,14 +106,20 @@ object CareAlarms {
         val manager = context.getSystemService(NotificationManager::class.java)
         // Never recreate/reset a channel the user has already configured.
         if (manager.getNotificationChannel(channelId) != null) return channelId
-        val previous = manager.getNotificationChannel("care_short_s${if (sound) 1 else 0}_v${if (vibration) 1 else 0}")
+        val suffix = "s${if (sound) 1 else 0}_v${if (vibration) 1 else 0}"
+        val sources = listOfNotNull(manager.getNotificationChannel("care_alarm_v2_$suffix"),
+            manager.getNotificationChannel("care_short_$suffix"))
+        val previous = sources.firstOrNull()
         val defaultAlarm = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
         val defaultNotification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         // API 30+ distinguishes a deliberately selected sound (including silence) from
         // the app's old default. On older Android, preserve silence/custom URIs conservatively.
-        val preserveSound = previous != null && if (Build.VERSION.SDK_INT >= 30)
-            previous.hasUserSetSound()
-        else previous.sound != defaultNotification
+        val explicitSound = sources.firstOrNull { old -> if (Build.VERSION.SDK_INT >= 30)
+            old.hasUserSetSound()
+        else old.sound != defaultNotification && old.sound != defaultAlarm }
+        preferences(context).edit().putString(CareReminderSound.URI_PREFIX + channelId,
+            if (!sound) "" else if (explicitSound != null) explicitSound.sound?.toString().orEmpty()
+            else defaultAlarm.toString()).apply()
         val channel = NotificationChannel(channelId, "Medicamentos · som ${if (sound) "ligado" else "desligado"} · vibração ${if (vibration) "ligada" else "desligada"}", previous?.importance ?: NotificationManager.IMPORTANCE_HIGH)
         channel.description = "Um aviso breve no horário cadastrado. Não confirma administração."
         channel.vibrationPattern = previous?.vibrationPattern ?: if (vibration) longArrayOf(0, 180, 120, 180) else longArrayOf(0)
@@ -117,7 +128,9 @@ object CareAlarms {
             channel.group = previous.group
             channel.setShowBadge(previous.canShowBadge())
         }
-        channel.setSound(if (!sound) null else if (preserveSound) previous?.sound else defaultAlarm,
+        // The notification transports the popup/vibration only. Audio has exactly one owner:
+        // the short-lived MediaPlayer, independent of the notification volume stream.
+        channel.setSound(null,
             AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
         manager.createNotificationChannel(channel)
@@ -140,8 +153,7 @@ object CareAlarms {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(publicVersion)
             .setContentIntent(pending).addAction(0, "Já administrei", pending).setAutoCancel(true)
             .setOnlyAlertOnce(true).setWhen(dose.instant(ZoneId.systemDefault()).toEpochMilli()).build()
-        // Only the system channel plays audio, once. Do not reuse the battery's looping
-        // MediaPlayer or FLAG_INSISTENT: that would duplicate/bypass notification controls.
+        // No notification audio or persistent loop: CareReminderSound owns the only player.
         notification.flags = notification.flags and Notification.FLAG_INSISTENT.inv()
         // A notification is a reminder only. Administration is written exclusively by the confirmation form.
         manager.notify("care:${dose.key}", NOTIFICATION_ID, notification)

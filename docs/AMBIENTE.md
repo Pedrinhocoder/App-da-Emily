@@ -54,6 +54,6 @@ Teste manualmente no Motorola: notificações e alarmes exatos concedidos/negado
 
 ## Dados e assinatura
 
-O pacote é `br.com.pedrinho.amorcarrega`, versão 2.0.0/código 2. O arquivo de preferências `config` da bateria foi mantido; Room usa outro banco. O schema inicial do módulo está versionado em `android/app/schemas/`, sem migração destrutiva.
+O pacote é `br.com.pedrinho.amorcarrega`, versão 2.0.1/código 3. O arquivo de preferências `config` da bateria foi mantido; Room usa outro banco. O schema inicial do módulo está versionado em `android/app/schemas/`, sem migração destrutiva.
 
 O APK debug é `android/app/build/outputs/apk/debug/app-debug.apk`. A configuração release herdada também usa chave debug. A chave da nuvem não comprova compatibilidade com o aplicativo instalado no celular. Para atualizar mantendo os dados, gere/assine com a chave original e versão compatível. Não coloque keystores, senhas ou bancos reais no repositório.

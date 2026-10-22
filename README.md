@@ -6,9 +6,9 @@ Aplicativo Android offline de cuidados e lembretes. Evolui o Amor, Carrega, pres
 
 ## Downloads desta versão
 
-- [App atualizado em ZIP (contém o APK)](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0-atualizado.zip)
+- [App atualizado em ZIP (contém o APK)](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.1-atualizado.zip)
 - [Projeto completo em ZIP](https://github.com/Pedrinhocoder/App-da-Emily/archive/refs/heads/codex/amor-cuida-2-0.zip)
-- [APK 2.0 de teste](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0-debug.apk)
+- [APK 2.0.1 de teste](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.1-debug.apk)
 
 ## Abrir no Android Studio
 
@@ -49,7 +49,7 @@ O app organiza uma prescrição cadastrada pelo usuário. Não calcula doses, n�
 | Room | 2.7.2 |
 | Java/Kotlin bytecode | 17 |
 | Android mínimo / alvo | 26 / 35 |
-| Aplicativo | 2.0.0 (`versionCode` 2) |
+| Aplicativo | 2.0.1 (`versionCode` 3) |
 
 Na pasta `android`:
 

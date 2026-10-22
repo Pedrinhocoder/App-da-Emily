@@ -4,7 +4,7 @@ import android.app.*
 import android.content.*
 import android.net.Uri
 import android.media.AudioAttributes
-import android.media.RingtoneManager
+import android.media.AudioManager
 import android.os.*
 import androidx.room.withTransaction
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -62,16 +62,23 @@ class CareNativeReminderTest {
             assertEquals(Notification.CATEGORY_REMINDER, notification!!.notification.category)
             assertEquals(0, notification.notification.flags and Notification.FLAG_INSISTENT)
             val channel = manager.getNotificationChannel(notification.notification.channelId)
-            assertEquals("Run with medication sound enabled and a non-muted test channel",
-                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), channel.sound)
-            assertEquals(AudioAttributes.USAGE_ALARM, channel.audioAttributes.usage)
-            assertEquals(AudioAttributes.CONTENT_TYPE_SONIFICATION, channel.audioAttributes.contentType)
+            assertNull("The notification must not duplicate the player's sound", channel.sound)
+            val audio = context.getSystemService(AudioManager::class.java)
+            val audioDeadline = SystemClock.elapsedRealtime() + 3000
+            fun alarmActive() = audio.activePlaybackConfigurations.any {
+                it.audioAttributes.usage == AudioAttributes.USAGE_ALARM
+            }
+            while (!alarmActive() && SystemClock.elapsedRealtime() < audioDeadline) SystemClock.sleep(50)
+            assertTrue("No actual USAGE_ALARM playback with screen off", alarmActive())
             assertNotEquals(0, notification.notification.flags and Notification.FLAG_ONLY_ALERT_ONCE)
             assertTrue("A reminder must not confirm administration", store.snapshot().records.none { it.medicineId == id })
             store.confirm(dose, "quantidade realmente informada", LocalDate.now(), LocalTime.now().withSecond(0).withNano(0))
             CareAlarms.cancelNotification(context, dose.key); CareAlarms.reschedule(context)
             assertTrue(manager.activeNotifications.none { it.tag == "care:${dose.key}" })
             assertEquals(1, store.snapshot().recordedOn(LocalDate.now()).count { it.medicineId == id })
+            val stopDeadline = SystemClock.elapsedRealtime() + 8000
+            while (alarmActive() && SystemClock.elapsedRealtime() < stopDeadline) SystemClock.sleep(50)
+            assertFalse("Medication audio did not stop automatically", alarmActive())
         } finally {
             dose?.let { CareAlarms.cancelNotification(context, it.key) }
             if (id != 0L) {

@@ -1,44 +1,47 @@
-# Correção localizada do áudio de medicamentos
+# Áudio direto dos medicamentos — 2.0.1
 
-## Investigação
+## Problema e mecanismo da bateria
 
-Em `BatteryMonitorService.kt`, `AlertEngine.fire()` chama `playLoopingAlarm()`. O alerta de bateria comum (incluindo 20%) usa `MediaPlayer`, `RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)` e `AudioAttributes` com `USAGE_ALARM` / `CONTENT_TYPE_SONIFICATION`. O player tem `isLooping = true`, preparo assíncrono e parada explícita por `stopImmediately()`. Os níveis críticos têm recursos de áudio próprios. Esse código não foi alterado.
+A alteração anterior trocou somente o NotificationChannel. O usuário confirmou que o pop-up continuou sem áudio no aparelho. Portanto, o teste anterior de URI/atributos do canal não demonstrava reprodução sonora efetiva e não foi suficiente para resolver o problema relatado.
 
-Em `care/CareAlarms.kt`, o medicamento já era entregue por AlarmManager e NotificationManager, mas o canal `care_short_s*_v*` usava `TYPE_NOTIFICATION` / `USAGE_NOTIFICATION_EVENT`. O som padrão de notificações pode estar silencioso ou ter volume/configuração diferentes do alarme. Além disso, modificar `setSound()` no código não corrige o áudio de um canal já criado no aparelho: essa propriedade é persistida pelo Android.
+A bateria, em `BatteryMonitorService.kt`, usa `AlertEngine.playLoopingAlarm()`: `MediaPlayer`, `RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)`, atributos `USAGE_ALARM` / `CONTENT_TYPE_SONIFICATION`, preparo assíncrono e repetição contínua. O player é parado por `stopImmediately()`. Esse código permanece intacto.
 
-## Alteração
+## Correção atual
 
-Somente a implementação de notificações dos medicamentos foi alterada:
+`CareReminderSound.kt` reproduz o áudio diretamente com um MediaPlayer independente, usando o mesmo URI padrão e atributos da bateria. Ele não compartilha o player nem a função de parada da bateria. A reprodução não depende mais do volume ou do som padrão de notificações. O volume de alarmes e a política de áudio do Android continuam sendo respeitados.
 
-- Novo canal versionado `care_alarm_v2_s*_v*`, usando `TYPE_ALARM`, `USAGE_ALARM` e `CONTENT_TYPE_SONIFICATION`, como o alerta comum de bateria.
-- O NotificationManager é a única fonte de reprodução. Não foi adicionado MediaPlayer, serviço de áudio ou uma segunda chamada de reprodução. Reutilizar o motor persistente da bateria interromperia/compartilharia seu estado e produziria um comportamento inadequado para medicamentos.
-- O aviso não usa `FLAG_INSISTENT`; toca uma vez e termina automaticamente, sem repetição contínua. A duração de uma reprodução depende do toque de alarme escolhido no sistema; não há temporizador de duração fixa. `ONLY_ALERT_ONCE` evita novo áudio quando a mesma notificação é atualizada.
-- O áudio é solicitado pelo sistema junto com a notificação, sem depender de Activity visível ou tela desbloqueada. O fluxo de AlarmManager e os receivers permanecem os mesmos.
-- O novo canal conserva a importância (inclusive bloqueio/baixa prioridade), grupo, indicação de badge e configuração de vibração do perfil anterior. No Android 11+, `hasUserSetSound()` preserva o som ou silêncio escolhido explicitamente pelo usuário. No Android 8–10, sem esse indicador público, sons personalizados e silêncio são conservados de forma preventiva; o URI padrão de notificações é trocado pelo URI padrão de alarme.
-- A preferência interna de som desligado continua criando um perfil silencioso. Um novo canal que já exista nunca tem seus ajustes redefinidos. Os canais antigos não são apagados.
+- O player é iniciado no callback de preparo. Não há loop. Ele para no término do arquivo ou após **cinco segundos**, o que acontecer primeiro.
+- Erros e preparo que não responde liberam o player. A etapa assíncrona tem limite de sete segundos. Um wakelock parcial, limitado a oito segundos e liberado no encerramento, mantém a CPU ativa com a tela apagada.
+- O receiver mantém seu resultado `goAsync()` pendente até o áudio terminar. Não é iniciado serviço em segundo plano/foreground para esse aviso curto. Isso também evita depender de uma Activity aberta ou da permissão para iniciar um novo foreground service a partir de um alarme aproximado.
+- O mutex de agendamento é liberado antes da reprodução. Lembretes simultâneos aguardam o mesmo toque, sem sobreposição ou fila de vários áudios. Reentrega de um aviso ainda visível não inicia outro player.
+- O canal novo `care_direct_v3_s*_v*` transmite o pop-up e a vibração, com som nulo. Assim o sistema não toca por cima do MediaPlayer. Se o usuário habilitar som nesse canal posteriormente, o player próprio é desativado para esse canal, deixando apenas o áudio escolhido no Android.
+- Preferência interna de som desligado, notificações negadas, canal bloqueado/de baixa prioridade, grupo bloqueado, silêncio explicitamente escolhido no canal anterior e modo de interrupção “nenhuma” impedem a reprodução própria. Outros filtros e volume são respeitados pelo áudio `USAGE_ALARM`; o app não força volume nem acesso ao Não Perturbe.
+- A migração consulta os canais anteriores `care_alarm_v2_*` e `care_short_*`, mantém importância/grupo/vibração e conserva URI personalizado ou silêncio explicitamente escolhido. Android 11+ oferece `hasUserSetSound()`; no Android 8–10, silêncio e URI personalizado são preservados preventivamente.
 
-Não foram alterados layout, formulários, banco, histórico, horários, manifesto, permissões ou alertas de bateria.
+Não houve alteração em layout, cadastros, banco, histórico, prescrições, horários ou código da bateria. A versão passou a **2.0.1 / código 3** para identificar a atualização instalada.
 
-## Validação
+## Testes
 
-`CareReminderAudioTest` exercita criação/migração dos canais e entrega real pela implementação do módulo em Robolectric nas APIs 28 e 35: URI e atributos de alarme, preferências de silêncio/som personalizado/importância, canal já configurado, ausência de loop, atualização do mesmo aviso e ausência de administração automática. O teste verifica a configuração enviada ao Android, não captura áudio do alto-falante.
+`CareReminderAudioTest` usa a implementação de MediaPlayer do Robolectric nas APIs 28 e 35, seus callbacks de preparo/conclusão/erro e o relógio do Looper. Agora verifica início efetivo do player, URI de alarme, atributos, ausência de loop, parada máxima de cinco segundos, conclusão antecipada, erro de fonte, erro durante reprodução, preparo sem resposta, liberação do wakelock, tela apagada, preferências, migração e ausência de som duplicado. O fluxo completo chama a entrega real do módulo e confere que o histórico continua sem administração automática.
 
-O teste instrumentado `CareNativeReminderTest` também verifica canal e atributos do aviso efetivamente entregue, agora com a tela apagada. Continua restrito a emulador dedicado e não foi executado nesta correção. Sua compilação não comprova som audível em aparelho físico.
+O teste instrumentado passa a consultar `AudioManager.activePlaybackConfigurations`: exige reprodução `USAGE_ALARM` após a entrega do lembrete com a tela apagada e verifica sua parada automática. Ele também exige um canal de transporte sem áudio. Não basta mais testar que o canal tem um URI.
 
-Comando de build/regressão na raiz:
+Os testes JVM demonstram chamadas e ciclo de vida do player em Android simulado. Não capturam som físico do alto-falante. A execução instrumentada/audição no Motorola permanece pendente; não foi declarada aprovada.
+
+Comando na raiz:
 
 ```bash
 python3 scripts/android-cloud.py gradle :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
 ```
 
-Resultado executado: **51 testes JVM aprovados** (19 novos casos de áudio e 32 de regressão), nenhum ignorado; build do app e do APK instrumentado aprovado; lint com zero erros e 37 avisos preexistentes. A assinatura do APK debug foi verificada.
+Resultado executado: **64 testes JVM aprovados** (32 de áudio e 32 de regressão), zero falhas ou ignorados. App e APK de testes instrumentados compilados; lint sem erros (37 avisos existentes). Assinatura debug verificada.
 
 ## Conferência no Motorola
 
-1. Atualize com a mesma assinatura, mantendo os dados. Ative o som de medicamentos no app e conceda notificações; confira o canal ativo em Ajustes.
-2. Selecione um som padrão de alarme audível no Android, confira o volume de alarmes e cadastre um horário próximo. Feche a interface e bloqueie a tela.
-3. Confirme que o aviso aparece, reproduz o som uma única vez e para sozinho. O registro deve continuar sem confirmação até o preenchimento manual.
-4. Repita com som desligado no app e com o canal silenciado/bloqueado pelo Android: não deve haver áudio. Confira também o modo Não Perturbe conforme a política do aparelho.
-5. Confira o alerta de bateria de 20%: deve continuar persistente, com sua parada original, sem interferência dos medicamentos.
+1. Atualize com a mesma assinatura e confira a versão 2.0.1 nas informações do app. Não desinstale uma instalação com registros importantes para contornar conflito de assinatura.
+2. Deixe o som de medicamentos ligado e confira o volume de alarmes do Android. Cadastre um horário próximo, feche a interface e apague/bloqueie a tela.
+3. Confira pop-up e o som padrão de alarme, parando sozinho em até cinco segundos. O registro deve continuar sem confirmação até o preenchimento manual.
+4. Repita com som desligado no app e com canal bloqueado/de baixa prioridade: não deve haver player próprio. Confira o modo Não Perturbe segundo a configuração do aparelho.
+5. Acione o alerta de bateria de 20%: deve continuar persistente, com sua parada original, sem interferência do medicamento.
 
-Não são forçados volume, saída de áudio ou acesso ao Não Perturbe. Permissão negada, bloqueio do canal, volume de alarme zerado, toque padrão silencioso e políticas do Android/fabricante podem impedir áudio. Alarmes aproximados podem atrasar conforme as condições já documentadas na versão 2.0.
+Erros de reprodução agora são registrados no Logcat com a tag `CareReminderSound`, incluindo falhas ao abrir/preparar/iniciar o áudio. Restrições do fabricante, volume de alarmes zerado e toque padrão silencioso ainda são condições do aparelho; não são contornadas aumentando o volume ou usando um áudio diferente sem escolha do usuário.
