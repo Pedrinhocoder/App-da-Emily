@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fundo do ícone adaptativo: vinho, mais claro no topo. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:type="linear"
+        android:startColor="#9C1857"
+        android:endColor="#3B0A24" />
+</shape>
