@@ -61,6 +61,7 @@ object CareAlarms {
             val dose = occurrence(snapshot, key)
             if (key in confirmed || dose == null || dose.medicine.archivedAt != null) notifications.cancel(it.tag, it.id)
         }
+        CareMedicationAlarmService.changed(context)
     }
     fun occurrence(snapshot: CareSnapshot, key: String): Occurrence? = runCatching {
         val parts = key.split(':', limit = 3)
@@ -80,19 +81,21 @@ object CareAlarms {
                     val alreadyVisible = context.getSystemService(NotificationManager::class.java)
                         .activeNotifications.any { it.tag == "care:$key" }
                     show(context, dose)
-                    if (alreadyVisible) null else channelId(context)
+                    if (CareMedicationAlarmService.start(context, key) || alreadyVisible) null else channelId(context)
                 } else null
             } finally {
                 // A notification permission/channel error must not stop the recurring schedule.
                 scheduleSnapshot(context, snapshot)
             }
         }
-        // Keep goAsync alive while playing, but do not hold the scheduling mutex for audio.
-        // Simultaneous reminders share one short clip rather than queueing/overlapping sounds.
+        // If Android denies background service startup (e.g. an approximate alarm), keep
+        // the brief audible fallback; opening the alarm screen starts persistent playback.
         if (soundChannel != null) CareReminderSound.play(context, soundChannel)
     }
-    fun cancelNotification(context: Context, key: String) =
+    fun cancelNotification(context: Context, key: String) {
         context.getSystemService(NotificationManager::class.java).cancel("care:$key", NOTIFICATION_ID)
+        CareMedicationAlarmService.changed(context)
+    }
 
     fun channelId(context: Context): String {
         val prefs = preferences(context)
@@ -143,15 +146,21 @@ object CareAlarms {
             .setData(Uri.parse("amorcuida://dose/${Uri.encode(dose.key)}")).putExtra(KEY, dose.key)
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pending = PendingIntent.getActivity(context, 0, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val alarm = PendingIntent.getActivity(context, 0,
+            Intent(context, br.com.pedrinho.amorcarrega.MedicationAlarmActivity::class.java)
+                .setData(Uri.parse("amorcuida://alarm-screen/${Uri.encode(dose.key)}"))
+                .putExtra(KEY, dose.key).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val publicVersion = NotificationCompat.Builder(context, channelId).setSmallIcon(R.drawable.ic_care_notification)
             .setContentTitle("Amor, Cuida ♥").setContentText("Você tem um lembrete de medicamento.").build()
         val notification = NotificationCompat.Builder(context, channelId).setSmallIcon(R.drawable.ic_care_notification)
             .setContentTitle("${dose.medicine.name} · ${dose.time}")
             .setContentText("${dose.plan.quantity} · Conforme a prescrição cadastrada")
             .setStyle(NotificationCompat.BigTextStyle().bigText("${dose.plan.quantity}\n${dose.medicine.presentation} ${dose.medicine.concentration}\nToque para informar se foi administrado."))
-            .setPriority(NotificationCompat.PRIORITY_HIGH).setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(publicVersion)
-            .setContentIntent(pending).addAction(0, "Já administrei", pending).setAutoCancel(true)
+            .setContentIntent(alarm).setFullScreenIntent(alarm, true)
+            .addAction(0, "Informar administração", pending).setAutoCancel(false).setOngoing(true)
             .setOnlyAlertOnce(true).setWhen(dose.instant(ZoneId.systemDefault()).toEpochMilli()).build()
         // No notification audio or persistent loop: CareReminderSound owns the only player.
         notification.flags = notification.flags and Notification.FLAG_INSISTENT.inv()

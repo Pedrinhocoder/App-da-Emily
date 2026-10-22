@@ -59,7 +59,8 @@ class CareNativeReminderTest {
                 notification = manager.activeNotifications.firstOrNull { it.tag == "care:${dose.key}" }
             }
             assertNotNull("Native offline reminder was not delivered", notification)
-            assertEquals(Notification.CATEGORY_REMINDER, notification!!.notification.category)
+            assertEquals(Notification.CATEGORY_ALARM, notification!!.notification.category)
+            assertNotNull(notification.notification.fullScreenIntent)
             assertEquals(0, notification.notification.flags and Notification.FLAG_INSISTENT)
             val channel = manager.getNotificationChannel(notification.notification.channelId)
             assertNull("The notification must not duplicate the player's sound", channel.sound)
@@ -70,6 +71,12 @@ class CareNativeReminderTest {
             }
             while (!alarmActive() && SystemClock.elapsedRealtime() < audioDeadline) SystemClock.sleep(50)
             assertTrue("No actual USAGE_ALARM playback with screen off", alarmActive())
+            val gapDeadline = SystemClock.elapsedRealtime() + 8000
+            while (alarmActive() && SystemClock.elapsedRealtime() < gapDeadline) SystemClock.sleep(50)
+            assertFalse("Intermittent alarm needs a silent interval", alarmActive())
+            val repeatDeadline = SystemClock.elapsedRealtime() + 8000
+            while (!alarmActive() && SystemClock.elapsedRealtime() < repeatDeadline) SystemClock.sleep(50)
+            assertTrue("Alarm did not repeat before administration confirmation", alarmActive())
             assertNotEquals(0, notification.notification.flags and Notification.FLAG_ONLY_ALERT_ONCE)
             assertTrue("A reminder must not confirm administration", store.snapshot().records.none { it.medicineId == id })
             store.confirm(dose, "quantidade realmente informada", LocalDate.now(), LocalTime.now().withSecond(0).withNano(0))
@@ -79,6 +86,8 @@ class CareNativeReminderTest {
             val stopDeadline = SystemClock.elapsedRealtime() + 8000
             while (alarmActive() && SystemClock.elapsedRealtime() < stopDeadline) SystemClock.sleep(50)
             assertFalse("Medication audio did not stop automatically", alarmActive())
+            SystemClock.sleep(CareMedicationAlarmService.PAUSE_MS + 1000)
+            assertFalse("Alarm restarted after administration confirmation", alarmActive())
         } finally {
             dose?.let { CareAlarms.cancelNotification(context, it.key) }
             if (id != 0L) {

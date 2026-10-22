@@ -13,9 +13,12 @@ import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.Before
+import org.junit.After
+import org.robolectric.android.controller.ServiceController
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Robolectric
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 import org.robolectric.Shadows.shadowOf
@@ -38,9 +41,16 @@ class CareReminderAudioTest {
     private val manager get() = context.getSystemService(NotificationManager::class.java)
     private val alarm get() = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
     private val players = CopyOnWriteArrayList<MediaPlayer>()
+    private var alarmService: ServiceController<CareMedicationAlarmService>? = null
     @Before fun setupAudio() {
+        runBlocking(Dispatchers.IO) { CareDatabase.get(context).clearAllTables() }
+        CareAlarms.preferences(context).edit().remove(CareMedicationAlarmService.ACTIVE_KEYS).commit()
         ShadowMediaPlayer.setMediaInfoProvider { ShadowMediaPlayer.MediaInfo(60000, 0) }
         ShadowMediaPlayer.setCreateListener { player, _ -> players.add(player) }
+    }
+    @After fun releaseAudio() {
+        alarmService?.destroy(); CareReminderSound.stop()
+        await { players.all { shadowOf(it).state == ShadowMediaPlayer.State.END } }
     }
     private fun await(timeoutMillis: Long = 5000, test: () -> Boolean) {
         val deadline = System.nanoTime() + timeoutMillis * 1_000_000
@@ -54,7 +64,7 @@ class CareReminderAudioTest {
     private fun running() = players.lastOrNull()?.let { shadowOf(it).state == ShadowMediaPlayer.State.STARTED } == true
     private fun finish(job: Deferred<Unit>, millis: Long = CareReminderSound.PLAY_MS) {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(millis))
-        await { job.isCompleted }
+        await { job.isCompleted && shadowOf(players.last()).state == ShadowMediaPlayer.State.END }
         runBlocking { job.await() }
         assertEquals(ShadowMediaPlayer.State.END, shadowOf(players.last()).state)
         assertFalse(ShadowPowerManager.getLatestWakeLock().isHeld)
@@ -153,6 +163,13 @@ class CareReminderAudioTest {
             Plan(medicineId = 0, quantity = "quantidade cadastrada", times = listOf(LocalTime.MIDNIGHT), from = today))
         val dose = store.snapshot().onDate(today).single { it.medicine.id == id }
         val delivery = CoroutineScope(Dispatchers.IO).async { CareAlarms.deliver(context, dose.key) }
+        await { delivery.isCompleted }
+        delivery.await()
+        shadowOf(context).grantPermissions("${context.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
+        val serviceIntent = shadowOf(context).nextStartedService
+        assertNotNull(serviceIntent)
+        val service = Robolectric.buildService(CareMedicationAlarmService::class.java, serviceIntent).create().startCommand(0, 1)
+            .also { alarmService = it }
         await { running() }
         val player = players.single()
         assertEquals(DataSource.toDataSource(context, alarm), shadowOf(player).dataSource)
@@ -173,6 +190,8 @@ class CareReminderAudioTest {
         assertEquals(1, manager.activeNotifications.count { it.tag == "care:${dose.key}" })
         assertEquals(1, players.size)
         finish(delivery)
+        service.destroy(); alarmService = null
+        Unit
     }
 
     @Test fun shortToneCompletionReleasesPlayerBeforeTimeLimit() {

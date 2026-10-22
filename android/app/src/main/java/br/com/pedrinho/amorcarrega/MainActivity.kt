@@ -77,7 +77,11 @@ class MainActivity : ComponentActivity() {
         registered = true
     }
     override fun onStop() { if (registered) { unregisterReceiver(events); registered = false }; super.onStop() }
-    override fun onResume() { super.onResume(); reload(); CareAlarms.enqueue(this) }
+    override fun onResume() {
+        super.onResume(); reload(); CareAlarms.enqueue(this)
+        CareAlarms.preferences(this).getStringSet(br.com.pedrinho.amorcarrega.care.CareMedicationAlarmService.ACTIVE_KEYS, emptySet())
+            ?.firstOrNull()?.let { br.com.pedrinho.amorcarrega.care.CareMedicationAlarmService.start(this, it) }
+    }
     override fun onSaveInstanceState(state: Bundle) {
         state.putInt("tab", selectedTab); state.putString("selected_date", selectedDate.toString()); state.putString("month", month.toString())
         saveConfirmation?.invoke()?.let { state.putBundle("confirmation", it) }
@@ -348,13 +352,16 @@ class MainActivity : ComponentActivity() {
         val prefs = CareAlarms.preferences(this)
         content.addView(ui.card().apply {
             addView(ui.text("Avisos de medicamentos", 19f, bold = true))
-            listOf("sound" to "Som breve", "vibration" to "Vibração").forEach { (key, label) ->
+            listOf("sound" to "Som do alarme de medicamento", "vibration" to "Vibração").forEach { (key, label) ->
                 addView(Switch(this@MainActivity).apply {
                     text = label; setTextColor(ui.ink); isChecked = prefs.getBoolean(key, true); minHeight = ui.dp(56)
-                    setOnCheckedChangeListener { _, value -> prefs.edit().putBoolean(key, value).apply() }
+                    setOnCheckedChangeListener { _, value ->
+                        prefs.edit().putBoolean(key, value).apply()
+                        br.com.pedrinho.amorcarrega.care.CareMedicationAlarmService.changed(this@MainActivity)
+                    }
                 })
             }
-            addView(ui.text("O som de medicamento é curto. Os alarmes de bateria têm seus próprios controles.", 12f, ui.muted))
+            addView(ui.text("O alarme toca em intervalos até você salvar a administração. Abrir ou cancelar o formulário não para o alarme. Os alertas de bateria têm seus próprios controles.", 12f, ui.muted))
             addView(ui.button("Canal de medicamentos no Android", false) {
                 val channelId = CareAlarms.ensureChannel(this@MainActivity)
                 openSettings(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
@@ -373,7 +380,14 @@ class MainActivity : ComponentActivity() {
                 if (Build.VERSION.SDK_INT >= 31) openSettings(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).setData(Uri.parse("package:$packageName")))
                 else Toast.makeText(this@MainActivity, "Disponível nesta versão do Android.", Toast.LENGTH_SHORT).show()
             })
-            if (!exact) addView(ui.text("O Android usará avisos aproximados até você permitir os alarmes exatos.", 12f, ui.accent))
+            if (!exact) addView(ui.text("Permita alarmes exatos para iniciar o alarme persistente com o app fechado. Sem essa permissão, o Android pode atrasar o aviso e limitar o som a um toque até abrir a tela do alarme.", 12f, ui.accent))
+            val fullScreen = Build.VERSION.SDK_INT < 34 || getSystemService(android.app.NotificationManager::class.java).canUseFullScreenIntent()
+            addView(ui.button(if (fullScreen) "✓ Tela de alarme permitida" else "Permitir tela de alarme bloqueada", false) {
+                if (Build.VERSION.SDK_INT >= 34) openSettings(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                    .setData(Uri.parse("package:$packageName")))
+                else openSettings(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+            })
+            if (!fullScreen) addView(ui.text("Sem esse acesso, o Android pode mostrar apenas a notificação. Ative para permitir a tela de alarme com o celular bloqueado.", 12f, ui.accent))
             addView(ui.button("Revisar uso de bateria / segundo plano", false) {
                 openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).setData(Uri.parse("package:$packageName")))
             })

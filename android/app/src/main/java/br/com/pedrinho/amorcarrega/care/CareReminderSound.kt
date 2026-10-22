@@ -24,7 +24,9 @@ object CareReminderSound {
     private const val LIFETIME_MS = 7000L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
-    private var active: Deferred<Unit>? = null
+    @Volatile private var active: Deferred<Unit>? = null
+
+    fun stop() { active?.cancel() }
 
     fun allowedUri(context: Context, channelId: String): Uri? {
         val prefs = CareAlarms.preferences(context)

@@ -1,0 +1,15 @@
+Amor, Cuida 2.0.2 — projeto completo e app atualizado
+
+Para instalar no celular:
+1. Extraia este ZIP.
+2. Abra Amor-Cuida-2.0.2-debug.apk, incluído na raiz.
+3. Confira que a versão instalada é 2.0.2.
+4. Nos Ajustes do app, permita notificações, alarmes exatos e tela de alarme bloqueada.
+5. Mantenha o som de medicamentos ligado e confira o volume de alarmes do Android.
+
+O alarme toca em trechos de até cinco segundos, com três segundos de pausa, até salvar a confirmação da administração. Abrir ou cancelar o formulário não confirma a dose.
+
+Para abrir os fontes no Android Studio, selecione a pasta android.
+Detalhes e limites do Android: docs/ALARME-MEDICAMENTOS-2.0.2.md.
+
+Atualize com a mesma assinatura para manter os dados. Não desinstale uma versão com registros importantes para contornar conflito de assinatura.

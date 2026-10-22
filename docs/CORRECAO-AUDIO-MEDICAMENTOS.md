@@ -1,5 +1,7 @@
 # Áudio direto dos medicamentos — 2.0.1
 
+Histórico da correção de áudio. A versão atual acrescenta repetição até confirmação e tela bloqueada: veja [2.0.2](ALARME-MEDICAMENTOS-2.0.2.md).
+
 ## Problema e mecanismo da bateria
 
 A alteração anterior trocou somente o NotificationChannel. O usuário confirmou que o pop-up continuou sem áudio no aparelho. Portanto, o teste anterior de URI/atributos do canal não demonstrava reprodução sonora efetiva e não foi suficiente para resolver o problema relatado.

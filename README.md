@@ -6,9 +6,10 @@ Aplicativo Android offline de cuidados e lembretes. Evolui o Amor, Carrega, pres
 
 ## Downloads desta versão
 
-- [App atualizado em ZIP (contém o APK)](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.1-atualizado.zip)
-- [Projeto completo em ZIP](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.1-projeto-completo.zip)
-- [APK 2.0.1 de teste](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.1-debug.apk)
+- [Projeto completo em ZIP](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.2-projeto-completo.zip)
+- [APK 2.0.2 de teste](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0.2-debug.apk)
+
+O ZIP completo inclui os fontes e **`Amor-Cuida-2.0.2-debug.apk`** na raiz. Para instalar no Android, extraia o ZIP e abra esse APK. Para desenvolver/compilar, siga abaixo.
 
 ## Abrir no Android Studio
 
@@ -18,6 +19,8 @@ Aplicativo Android offline de cuidados e lembretes. Evolui o Amor, Carrega, pres
 4. Execute o módulo `app` em um aparelho/emulador Android 8.0 ou superior.
 
 O wrapper já usa **Gradle 8.7**, com checksum oficial. Não é necessário trocar a versão manualmente. Dependências precisam de Internet na primeira sincronização; o aplicativo funciona offline depois de instalado.
+
+Para o alarme com a tela apagada, abra **Ajustes** no app e permita notificações, alarmes exatos e tela de alarme bloqueada. Veja o [funcionamento e as permissões da versão 2.0.2](docs/ALARME-MEDICAMENTOS-2.0.2.md).
 
 ## Interface
 
@@ -34,7 +37,7 @@ Renderizações das Views reais em testes JVM/Skia, com dados fictícios (não c
 - **Confirmação manual:** quantidade realmente administrada, data e hora reais. Um aviso nunca confirma uma administração sozinho.
 - **Calendário offline:** marca a data real informada na administração. Permite consultar os registros e os lembretes de cada dia.
 - **Histórico:** administrações e correções com motivo, valores anteriores e novos, e data da alteração.
-- **Avisos locais:** AlarmManager, notificações breves, som/vibração opcionais e reprogramação após reinício, mudança de hora/fuso e alterações de cadastro/permissões.
+- **Alarmes de medicamentos:** som intermitente até salvar a confirmação, tela de alarme com o celular bloqueado (conforme permissões), AlarmManager e serviço de áudio independente da bateria. Som/vibração continuam opcionais.
 - **Bateria:** níveis configurável, 15%, 5% e 1%, monitoramento, alertas e testes da base anterior continuam no módulo Bateria.
 
 O app organiza uma prescrição cadastrada pelo usuário. Não calcula doses, não recomenda compensações e não substitui orientação profissional. Não integra Google Agenda, calendário do Motorola, contas ou serviços de nuvem.
@@ -49,7 +52,7 @@ O app organiza uma prescrição cadastrada pelo usuário. Não calcula doses, n�
 | Room | 2.7.2 |
 | Java/Kotlin bytecode | 17 |
 | Android mínimo / alvo | 26 / 35 |
-| Aplicativo | 2.0.1 (`versionCode` 3) |
+| Aplicativo | 2.0.2 (`versionCode` 4) |
 
 Na pasta `android`:
 
