@@ -1,60 +1,59 @@
-# Desenvolvimento Android na nuvem
+# Desenvolvimento Android — Amor, Cuida 2.0
 
-A base recebida em `AmorCarrega-V8.zip` foi importada para `android/`, sem alterações no código, recursos, manifesto ou dependências. O README original do repositório permanece na raiz; a documentação do ZIP está em `android/README.md`.
+O projeto está em `android/`, com wrapper **Gradle 8.7** corrigido a partir do ZIP enviado. Kotlin 2.0.21, KSP 2.0.21-1.0.28, Android Gradle Plugin 8.6.1 e Room 2.7.2. SDK de compilação/alvo 35, mínimo 26, bytecode Java/Kotlin 17. Use JDK 17 ou 21 no Android Studio.
 
-## Ferramentas e comandos
-
-- Java 21 disponível na máquina; o aplicativo mantém seu alvo de bytecode Java/Kotlin 17.
-- Android SDK 35, Build Tools 34.0.0 e Platform Tools em `/workspace/toolchains/android-sdk`.
-- Gradle 8.7 em `/workspace/toolchains/gradle-8.7`, usado pelo helper. O wrapper recebido aponta para Gradle 9.3.0, mas o Android Gradle Plugin recebido é 8.6.1. O helper evita alterar esses arquivos e usa o Gradle 8.7 recomendado para esse plugin.
-- Cache e configuração local ficam fora do checkout em `/workspace/toolchains`.
-- Instalações usam HTTPS com verificação TLS e checksums oficiais. A CA e o proxy da sessão são respeitados pelas ferramentas Java.
+## Máquina na nuvem
 
 Na raiz `/workspace/App-da-Emily`:
 
 ```bash
 bash scripts/install-android-cloud.sh
-python3 scripts/android-cloud.py gradle :app:assembleDebug
-python3 scripts/android-cloud.py gradle :app:testDebugUnitTest :app:lintDebug
+python3 scripts/android-cloud.py gradle :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
+python3 scripts/android-cloud.py gradle :app:assembleDebugAndroidTest
 ```
 
-O APK de desenvolvimento fica em `android/app/build/outputs/apk/debug/app-debug.apk`. Não há servidor web a iniciar. Para abrir e testar o app é necessário Android Studio, emulador ou aparelho Android 8.0+.
+O helper configura proxy, confiança na CA da sessão, SDK e cache Java. As instalações mantêm TLS e checksums oficiais. Os arquivos de ferramentas ficam em `/workspace/toolchains`, fora do Git. O helper não altera `HOME`. A pasta `/home/agent/.android` é necessária para a chave local do ADB; se o sandbox impedir sua inicialização, solicite acesso somente a esse caminho pelo fluxo de permissões.
 
-Cada tarefa na nuvem já é isolada. Use o checkout existente; não crie Git worktrees sem solicitação explícita.
+Cada tarefa na nuvem já é isolada: use o checkout existente; não crie worktrees sem solicitação explícita. O aplicativo não tem servidor web. Processos de emulador/ADB não devem ser considerados persistentes entre tarefas.
 
-## Assinatura e instalação
+## Testes no host
 
-O identificador recebido é `br.com.pedrinho.amorcarrega`, com `versionCode = 1`. A configuração original de release usa a chave de debug. A chave gerada nesta máquina não comprova compatibilidade com a assinatura de uma instalação anterior. Antes de distribuir uma atualização, compare certificados e versão com o APK instalado e use a chave original por um fluxo seguro. Não desinstale o app existente como parte da preparação: isso pode apagar os dados.
+Os testes Kotlin de recorrência e bateria executam sem emulador. O contrato de persistência Room executa também no Robolectric (Android API 28), com os DAOs reais, transações e SQLite. `CareScreensTest` renderiza as Views reais em Skia e gera imagens em `android/app/build/screenshots`; essas imagens são renderizações de teste, não capturas de um Motorola.
 
-## Validação em aparelho
+```bash
+python3 scripts/android-cloud.py gradle :app:testDebugUnitTest
+```
 
-A compilação e o lint não substituem testes reais de notificações, áudio, vibração, tela bloqueada e políticas Motorola. O ZIP não inclui testes automatizados. A tarefa Gradle de testes pode concluir com `NO-SOURCE`; isso não equivale a testes aprovados.
+## Emulador e testes instrumentados
 
-Use os controles de teste já existentes para verificar os níveis configurável, 15%, 5% e 1%, parada pela notificação, conexão do carregador e silenciamento. Depois valide reinicialização e permissões no aparelho. Não use um APK de desenvolvimento como atualização definitiva sem conferir sua assinatura.
-
-## Emulador local na nuvem
-
-A instalação também prepara o emulador Android e a imagem `system-images;android-35;aosp_atd;x86_64`, com o AVD `AmorCuida35ATD`, em resolução 540×960. O app não depende de serviços Google. A imagem completa Google APIs apresentou travamentos do sistema sem KVM; a imagem AOSP ATD foi escolhida para reduzir a carga. Não há KVM nesta máquina; a inicialização usa emulação por software e levou cerca de 7 minutos no primeiro boot validado. Aguarde até 10 minutos, acompanhando o progresso dos logs, antes de diagnosticar uma falha de boot.
-
-O ADB necessita de `/home/agent/.android` para sua chave local de desenvolvimento. A pasta foi inicializada pelo fluxo de permissão do ambiente. Se uma nova tarefa restringir a criação dessa pasta, solicite acesso somente a esse caminho; não desative autenticação nem altere `HOME`.
-
-Na raiz do repositório, execute o emulador em processo separado e mantenha seus logs:
+A instalação prepara `AmorCuida35ATD`, imagem mínima Android 15/API 35, AOSP ATD, display 540×960. A imagem ATD desativa o desenho por padrão e pode produzir capturas pretas. Ela permite testes de estrutura de interface, banco e serviços. O Android sem KVM é lento nesta máquina e apresentou reinícios do sistema pelo watchdog. Consulte os resultados reais em `VALIDACAO.md`; não trate um processo, uma porta ou `sys.boot_completed=1` isoladamente como comprovação de funcionamento.
 
 ```bash
 python3 scripts/android-cloud.py emulator -avd AmorCuida35ATD -accel off -gpu swiftshader -no-window -no-audio -no-snapshot -no-boot-anim -memory 2048 -cores 2 -port 5554 -no-metrics > /tmp/amor-emulator.log 2>&1
 ```
 
-Em outro processo, aguarde `adb -s emulator-5554 shell getprop sys.boot_completed` retornar `1`. O estado `device` sozinho não garante que o gerenciador de pacotes esteja pronto.
+Mantenha o comando numa sessão de execução longa, acompanhando o progresso com saídas antecipadas. Aguarde o boot e verifique que os serviços de atividade e pacote respondem. Em outra sessão, na raiz:
 
 ```bash
-python3 scripts/android-cloud.py adb -s emulator-5554 shell getprop sys.boot_completed
 python3 scripts/android-cloud.py adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
 python3 scripts/android-cloud.py adb -s emulator-5554 shell wm dismiss-keyguard
-python3 scripts/android-cloud.py adb -s emulator-5554 shell settings put system screen_off_timeout 1800000
 python3 scripts/android-cloud.py adb -s emulator-5554 install -r -g android/app/build/outputs/apk/debug/app-debug.apk
 python3 scripts/android-cloud.py adb -s emulator-5554 shell am start -n br.com.pedrinho.amorcarrega/.MainActivity
 ```
 
-O `-g` concede permissões de runtime ao APK de teste somente no emulador. Não use esses comandos em um aparelho pessoal sem selecionar explicitamente o serial correto. Não presuma que emulador ou servidor ADB sobreviverão a uma nova tarefa.
+Use apenas um emulador **dedicado aos testes**, sem dados reais. A suíte instrumentada inclui um teste que desliga temporariamente Wi-Fi/dados e concede alarmes exatos; isso não deve ser executado inadvertidamente em um aparelho pessoal. Com o emulador saudável:
 
-A imagem AOSP ATD usa `debug.hwui.drawing_enabled=0`: capturas podem ficar pretas. A hierarquia de Views e os serviços permitem verificações funcionais sem renderização. A tentativa de ativar o desenho em runtime não produziu uma captura utilizável nesta máquina; não considere aparência, áudio ou comportamento de bloqueio validados. Para conferir a hierarquia, use `adb shell uiautomator dump /data/local/tmp/amor-ui.xml` pelo helper. O `am start -W` pode esperar o desenho ou uma tela de permissão; use `am start -n` e confirme a atividade, a hierarquia e o serviço.
+```bash
+# Na pasta android, usando SDK/JDK configurados:
+./gradlew :app:connectedDebugAndroidTest
+```
+
+Na nuvem, use `python3 scripts/android-cloud.py gradle :app:connectedDebugAndroidTest`. O teste nativo prepara a concessão de alarmes exatos. Para verificar especificamente o caminho aproximado, configure a negação antes de iniciar um processo de teste da interface e passe `-e alarm_mode inexact`; não revogue esse acesso durante um processo de instrumentação, pois o Android pode encerrar o app ao revogá-lo.
+
+Teste manualmente no Motorola: notificações e alarmes exatos concedidos/negados, canal silenciado, Não Perturbe, restrições de bateria, app em segundo plano, tela bloqueada, reboot e mudança de fuso/hora. **Forçar parada** pelo Android bloqueia alarmes até reabrir o app.
+
+## Dados e assinatura
+
+O pacote é `br.com.pedrinho.amorcarrega`, versão 2.0.0/código 2. O arquivo de preferências `config` da bateria foi mantido; Room usa outro banco. O schema inicial do módulo está versionado em `android/app/schemas/`, sem migração destrutiva.
+
+O APK debug é `android/app/build/outputs/apk/debug/app-debug.apk`. A configuração release herdada também usa chave debug. A chave da nuvem não comprova compatibilidade com o aplicativo instalado no celular. Para atualizar mantendo os dados, gere/assine com a chave original e versão compatível. Não coloque keystores, senhas ou bancos reais no repositório.

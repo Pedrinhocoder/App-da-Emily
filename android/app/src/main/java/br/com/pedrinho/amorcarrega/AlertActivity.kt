@@ -18,6 +18,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
@@ -52,6 +53,11 @@ class AlertActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Critical alert closes only through its explicit stop action or the charger.
+            }
+        })
 
         window.addFlags(
             WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
@@ -199,11 +205,6 @@ class AlertActivity : ComponentActivity() {
         // (singleTask) e a redesenha com o nível novo, em vez de empilhar duas telas.
         setIntent(intent)
         recreate()
-    }
-
-    override fun onBackPressed() {
-        // O alerta permanece aberto até o carregador ser conectado
-        // ou a pessoa tocar em "Desligar alerta".
     }
 
     override fun onStart() {

@@ -1,27 +1,22 @@
-# Amor, Cuida 2.0 — roteiro de implementação
+# Amor, Cuida 2.0 — implementação
 
-Referência do produto: `Amor_Cuida_2_0_Roteiro_Oficial.pdf`, fornecido pelo usuário. O documento é uma especificação de evolução, não evidência de funcionalidades presentes na V8.
+Base: `Amor_Cuida_Android_Studio_Sync_Corrigido.zip`, que mantém os fontes V8 e corrige o wrapper para Gradle 8.7. Referência: roteiro oficial fornecido em PDF. O pedido posterior do usuário acrescentou o calendário **interno e offline**; não há integração com calendário Motorola/Google.
 
-## Base importada
+| Requisito | Implementação |
+|---|---|
+| Identidade Amor, Cuida e interface modernizada | Nova tela inicial, cartões, navegação inferior, ícones, paleta vinho/rosa e suporte a tema escuro |
+| Preservar bateria | Tela anterior em BatteryActivity, mesmos níveis e preferências; serviço, testes e alertas mantidos |
+| Múltiplos medicamentos | Cadastro/edição de nome, apresentação, concentração, quantidade, horários, recorrência, início/término e observações |
+| Alteração futura conforme prescrição | Esquemas versionados, data de início explícita, preservação do período anterior |
+| Alarmes pelo Android | AlarmManager, receivers privados, horário/fuso do aparelho, aviso breve e configurações independentes |
+| Reprogramação | Boot, atualização, hora/fuso/data, cadastro, confirmação e retorno de permissões |
+| Confirmação manual | Quantidade real e data/hora reais, sem confirmação por notificação ou passagem do tempo |
+| Estados | Pendente, confirmado e sem confirmação, sem inferir esquecimento |
+| Histórico com correções | Room, snapshot da prescrição, auditoria de antes/depois/motivo e controle de escrita concorrente |
+| Calendário local | Marcadores na data real da administração, consulta de registros e lembretes por dia |
+| Offline | Sem conta, Internet, API externa ou integração com calendário externo |
+| Segurança da prescrição | Sem cálculo de dose, compensação ou alteração automática de tratamento; nenhum medicamento pré-cadastrado |
 
-O ZIP tem pasta interna `v7`, README com título V8 e versão Android `1.0`/código `1`. A base inclui telas e monitoramento de bateria, níveis de alerta, testes manuais, som, vibração, serviço em primeiro plano e recepção de reinício. Não foi comparada com o projeto do PC nem com o APK instalado.
+O schema inicial do módulo é exportado e não usa migração destrutiva. O pacote continua `br.com.pedrinho.amorcarrega` e a versão foi incrementada para 2.0.0/código 2. A assinatura original de uma instalação no PC/Motorola não faz parte do ZIP; a compatibilidade dessa assinatura não pode ser presumida para o APK gerado na nuvem.
 
-As preferências existentes usam SharedPreferences `config`. O pacote permanece `br.com.pedrinho.amorcarrega`. Preservar essas identidades e dados ao evoluir.
-
-## Próximas etapas, ainda não implementadas
-
-1. Conferir se esta base corresponde à versão funcional mais recente e registrar os testes de regressão no Motorola.
-2. Aplicar nome Amor, Cuida e navegação Início, Bateria, Medicamentos, Histórico e Configurações. Preservar o módulo de bateria.
-3. Adicionar cadastro/edição de medicamentos conforme prescrição: nome, apresentação, concentração, quantidade, horários, início e término opcionais. Nenhuma dose de exemplo deve virar uma prescrição automática.
-4. Criar persistência local (preferencialmente Room) e migrações. Separar cadastro, ocorrência agendada e administração confirmada.
-5. Agendar avisos locais com AlarmManager e receivers; respeitar fuso/data do aparelho e reagendar após reinício, mudança de hora/fuso, edição e alterações de permissões aplicáveis.
-6. Usar notificações breves de medicamento, com vibração opcional; não reutilizar o som persistente de emergência de bateria.
-7. Registrar administração somente mediante confirmação manual de quantidade e data/hora reais. Diferenciar pendente, confirmado e sem confirmação. Permitir correção com trilha da alteração.
-8. Tratar permissões de notificação, alarmes exatos e restrições Motorola. Validar sem internet, com tela bloqueada, processo encerrado e após reinício.
-9. Reexecutar os testes de bateria e validar a atualização assinada com a chave original no Motorola antes da distribuição.
-
-O app não deve calcular doses, recomendar compensações ou inferir administração por um aviso disparado. Não incluir calendário, contas ou nuvem nesta versão. Não prometer alarmes infalíveis sob restrições do Android.
-
-## Critério de entrega
-
-A preparação do repositório e do ambiente não constitui entrega da versão 2.0. A conclusão do roteiro depende da implementação acima e de validação no Motorola.
+Resultados executados e pendências reais estão em `VALIDACAO.md`. A conclusão no Motorola, incluindo tela bloqueada, som, vibração, restrições de energia e atualização com a assinatura original, depende de testes no aparelho físico; não foi substituída por uma afirmação de sucesso no emulador.
