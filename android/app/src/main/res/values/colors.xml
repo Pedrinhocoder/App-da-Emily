@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Os nomes são semânticos e valem para claro e escuro; a paleta escura
+         fica em values-night/colors.xml. -->
+    <!-- Fundo: rosa-blush no topo, rosa no meio, vinho embaixo -->
+    <color name="bg_top">#FFE9F0</color>
+    <color name="bg_mid">#F3A6BF</color>
+    <color name="bg_bottom">#7C2248</color>
+
+    <!-- Cartões -->
+    <color name="card">#F7FFFFFF</color>
+    <color name="card_stroke">#66FFFFFF</color>
+    <color name="wine_shadow">#7C2248</color>
+
+    <!-- Texto e destaques -->
+    <color name="wine_text">#5C1236</color>
+    <color name="muted_text">#8A5A6B</color>
+    <color name="rose_accent">#C2185B</color>
+    <color name="wine_deep">#880E4F</color>
+    <color name="blush">#FFF1F5</color>
+    <color name="rose_line">#F3C4D3</color>
+
+    <!-- Botão preenchido (gradiente) e fundo do botão contornado.
+         Iguais nos dois temas: o texto do botão preenchido é sempre branco. -->
+    <color name="btn_start">#C2185B</color>
+    <color name="outline_fill">#FFFFFF</color>
+
+    <!-- Anel de bateria e ripples -->
+    <color name="ring_track">#26C2185B</color>
+    <color name="ripple_light">#44FFFFFF</color>
+    <color name="ripple_rose">#26C2185B</color>
+</resources>

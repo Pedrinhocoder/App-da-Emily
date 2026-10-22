@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Versão escura do tema: só muda o pai; o resto acompanha values/styles.xml. -->
+    <style name="Theme.AmorCarrega" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:colorAccent">@color/rose_accent</item>
+        <item name="android:windowBackground">@drawable/bg_romantic</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

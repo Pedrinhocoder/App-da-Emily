@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- angle 270 = de cima para baixo -->
+    <gradient
+        android:angle="270"
+        android:type="linear"
+        android:startColor="@color/bg_top"
+        android:centerColor="@color/bg_mid"
+        android:endColor="@color/bg_bottom" />
+</shape>

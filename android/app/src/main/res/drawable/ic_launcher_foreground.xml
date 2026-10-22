@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coração com raio. Tudo fica dentro da zona segura (círculo de 66dp no
+     centro dos 108dp), então nenhuma máscara de fabricante corta o desenho. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Coração -->
+    <path android:pathData="M54,80 C54,80 28,62 28,45 C28,36 35,30 43,30 C48,30 52,33 54,37 C56,33 60,30 65,30 C73,30 80,36 80,45 C80,62 54,80 54,80 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="34"
+                android:startY="30"
+                android:endX="76"
+                android:endY="80">
+                <item android:offset="0" android:color="#FF7A9C" />
+                <item android:offset="0.55" android:color="#E91E63" />
+                <item android:offset="1" android:color="#B0134F" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Brilho no lóbulo esquerdo -->
+    <path
+        android:fillColor="#59FFFFFF"
+        android:pathData="M37,40 C37,36.5 39.8,34.2 43,34.2 C44.4,34.2 45.5,34.6 46.4,35.3 C42.5,35.6 39.4,37.6 37.9,41.2 C37.3,41 37,40.6 37,40 Z" />
+
+    <!-- Raio -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M57.15,38 L44.55,54.5 L52.95,54.5 L50.85,68 L63.45,50 L55.05,50 Z" />
+</vector>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta escura (aplicada automaticamente quando o sistema está no modo escuro).
+         Mesmos nomes de values/colors.xml: "wine_text" aqui é o texto claro. -->
+
+    <!-- Fundo: ameixa escura no topo até quase preto-vinho embaixo -->
+    <color name="bg_top">#2D0E1F</color>
+    <color name="bg_mid">#1E0914</color>
+    <color name="bg_bottom">#0E0409</color>
+
+    <!-- Cartões -->
+    <color name="card">#F0402036</color>
+    <color name="card_stroke">#33FF8FB3</color>
+    <color name="wine_shadow">#000000</color>
+
+    <!-- Texto e destaques -->
+    <color name="wine_text">#FFE6EF</color>
+    <color name="muted_text">#D9A7BA</color>
+    <color name="rose_accent">#FF80AB</color>
+    <color name="wine_deep">#3B0A24</color>
+    <color name="blush">#542844</color>
+    <color name="rose_line">#7A3B58</color>
+    <color name="outline_fill">#2B1322</color>
+
+    <!-- Botão preenchido: mesma cor nos dois temas -->
+    <color name="btn_start">#C2185B</color>
+
+    <!-- Anel de bateria e ripples -->
+    <color name="ring_track">#40FF80AB</color>
+    <color name="ripple_light">#33FFFFFF</color>
+    <color name="ripple_rose">#33FF80AB</color>
+</resources>
