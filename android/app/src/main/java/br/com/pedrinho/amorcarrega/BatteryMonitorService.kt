@@ -48,7 +48,7 @@ class BatteryMonitorService : Service() {
 
         val notification = NotificationCompat.Builder(this, SERVICE_CHANNEL)
             .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
-            .setContentTitle("Amor, Carrega ❤️")
+            .setContentTitle("Amor, Cuida ♥ · bateria")
             .setContentText("Monitorando a bateria.")
             .setOngoing(true)
             .setSilent(true)

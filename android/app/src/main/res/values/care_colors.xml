@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="care_background">#FFF9FB</color>
+    <color name="care_surface">#FFFFFF</color>
+    <color name="care_text">#51162F</color>
+    <color name="care_muted">#7C6871</color>
+    <color name="care_accent">#8C3058</color>
+    <color name="care_soft">#F5DCE6</color>
+    <color name="care_border">#EEDCE3</color>
+    <color name="care_good">#2E6958</color>
+    <color name="care_good_bg">#EAF4EF</color>
+    <color name="care_action">#8C3058</color>
+</resources>

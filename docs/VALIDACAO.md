@@ -1,32 +1,47 @@
-# Validação da base importada
+# Validação da versão 2.0
 
-## Integridade
+## Resultado desta entrega
 
-Os 30 arquivos do ZIP foram comparados byte a byte com `android/` após a importação e compilação: nenhuma diferença. O README original da raiz também foi preservado.
+Build e verificações executados em 22/10/2026, com Gradle 8.7 e Java 21:
 
-## Build e análise
+```bash
+python3 scripts/android-cloud.py gradle :app:testDebugUnitTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+```
 
-- `:app:assembleDebug`: aprovado; APK gerado para pacote `br.com.pedrinho.amorcarrega`, versão 1.0 (1), Android mínimo 26 e alvo 35.
-- Reexecução de `scripts/install-android-cloud.sh`: aprovada, build incremental com 33 tarefas atualizadas, sem reinstalações desnecessárias.
-- `apksigner verify`: aprovado, assinatura de desenvolvimento Android Debug. Não prova compatibilidade com a assinatura do app instalado.
-- `:app:testDebugUnitTest`: `NO-SOURCE`; nenhum teste executado.
-- `:app:lintDebug`: reprovado com 1 erro e 31 avisos. Erro `MissingSuperCall` em `AlertActivity.kt:204`, no override de `onBackPressed`. O código recebido deixa esse método vazio intencionalmente para manter o alerta aberto. A escolha precisa ser revista em uma tarefa de código, preservando o comportamento desejado. Não foi suprimido o lint nem alterado o código durante a preparação.
+- Build do app e do APK de testes instrumentados: aprovados.
+- **32 testes JVM executados, zero falhas e zero testes ignorados.**
+- Lint: zero erros, 37 avisos. O relatório detalhado é gerado em `android/app/build/reports/lint-results-debug.html`. Há avisos de compatibilidade/estilo e APIs da interface legada; o build não foi configurado para esconder falhas.
+- APK: versão `2.0.0` (2), pacote `br.com.pedrinho.amorcarrega`, Android mínimo 26 e alvo 35. Assinatura de desenvolvimento verificada com `apksigner`.
+- O manifesto do app não solicita acesso à Internet.
 
-Relatório completo gerado em `android/app/build/reports/lint-results-debug.html` e versão texto em `android/app/build/intermediates/lint_intermediate_text_report/debug/lintReportDebug/lint-results-debug.txt`.
+## Cobertura executada
 
-O módulo de medicamentos não foi implementado nesta preparação; consulte `EVOLUCAO-2.0.md`.
+| Grupo | Testes | Verificações |
+|---|---:|---|
+| Agendamentos | 16 | Recorrência diária, dias da semana, intervalos, múltiplos horários, versões futuras, término, arquivamento, fuso e horário de verão |
+| Banco Room / SQLite em Robolectric | 13 | Confirmação manual, quantidade e data reais, duplicidade, persistência ao reabrir, correções auditadas, conflitos de edição, rejeição de datas futuras, versões de prescrição e preferências de bateria preservadas |
+| Bateria | 2 | Níveis originais e limites do valor configurável |
+| Telas reais em Robolectric / Skia | 1 | Renderização de cinco telas e fluxo pelos controles de cadastro, confirmação e correção, com verificação do banco e auditoria |
 
-## Verificação funcional no Android 15
+As imagens em `docs/imagens` são renderizações das Views reais com dados fictícios. Não são capturas de um aparelho. Os testes de interface usam a implementação de Room e as Activities do app; não demonstram entrega de alarmes pelo sistema operacional.
 
-A imagem completa Google APIs apresentou reinício pelo watchdog e consultas com timeout sem KVM. Foi substituída por AOSP ATD, com display 540×960 e 2 GB de RAM. A primeira inicialização da imagem mínima levou cerca de 7 minutos.
+## Testes nativos preparados e limites
 
-Verificações concluídas na imagem mínima:
+Há 15 testes instrumentados: 13 contratos de banco, um fluxo de interface Espresso e um teste de lembrete nativo offline com AlarmManager e notificação. O APK desses testes compilou. **Não há resultado aprovado de execução nativa da versão 2.0 nesta entrega.** O emulador Android 15 sem aceleração KVM apresentou reinícios do framework e serviços indisponíveis, impedindo uma execução confiável. A compilação e os testes JVM não substituem essa verificação.
 
-- Instalação do APK via ADB: `Success`.
-- `MainActivity` confirmada como `topResumedActivity`; permissão `POST_NOTIFICATIONS` concedida.
-- Hierarquia de interface: título “Amor, Carrega”, controle “Primeiro alerta”, valor 30% e explicações dos níveis 15%, 5% e 1% presentes.
-- Serviço `BatteryMonitorService`: `isForeground=true`, notificação contínua `id=10`.
-- Bateria simulada sem carregador e em 15%: notificação do aplicativo `id=9015`, canal `battery_alerts`, importância 4 e categoria `alarm`.
-- Após `cmd battery reset`, que restaurou o carregamento original: notificação `id=9015` cancelada e notificação de monitoramento `id=10` mantida. O estado de bateria simulado foi restaurado.
+Os testes instrumentados devem rodar em emulador dedicado. O teste de lembrete altera temporariamente Wi-Fi/dados e permissões, restaura a conectividade no encerramento e utiliza registros de teste próprios. Não o execute sobre dados pessoais. Para executar o conjunto padrão:
 
-A imagem ATD desativa o desenho da interface por padrão; não foi obtida captura visual utilizável. Esses resultados validam instalação, estrutura da tela, serviço e fluxo representativo de notificação/cancelamento. Não validam aparência, som audível, vibração, telas de emergência, todos os níveis, tela bloqueada, reinício no Motorola nem atualização sobre o APK instalado. Essas verificações permanecem necessárias no aparelho real. Nenhuma funcionalidade de medicamentos foi testada ou implementada.
+```bash
+cd android
+./gradlew :app:connectedDebugAndroidTest
+```
+
+Para exercitar a alternativa de alarme sem permissão exata, negue a permissão **antes** de iniciar o runner e execute apenas `CareUiFlowTest` com `-e alarm_mode inexact`. Revogar essa permissão durante uma instrumentação pode encerrar o processo no Android.
+
+Permanecem pendentes no Motorola: entrega de lembretes com app fechado/tela bloqueada, otimização de bateria do fabricante, reinício e mudança de hora/fuso, permissão negada/reconcedida, som, vibração e atualização sobre a instalação real. O Android pode atrasar avisos quando a permissão de alarme exato está negada; a interface informa essa condição.
+
+## Compatibilidade e dados
+
+A lógica e as preferências de bateria foram preservadas. A validação nativa da base V8 anterior não equivale a um teste nativo aprovado desta nova versão. O calendário de medicamentos reflete somente confirmações manuais; ausência de confirmação não prova que uma administração deixou de ocorrer.
+
+O APK é de desenvolvimento. Atualizar sem perder dados exige a mesma assinatura da instalação existente; o build da nuvem não comprova compatibilidade com a chave do seu Android Studio. Não desinstale uma versão com registros importantes para contornar uma incompatibilidade de assinatura.
