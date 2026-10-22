@@ -6,6 +6,7 @@ Aplicativo Android offline de cuidados e lembretes. Evolui o Amor, Carrega, pres
 
 ## Downloads desta versão
 
+- [App atualizado em ZIP (contém o APK)](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0-atualizado.zip)
 - [Projeto completo em ZIP](https://github.com/Pedrinhocoder/App-da-Emily/archive/refs/heads/codex/amor-cuida-2-0.zip)
 - [APK 2.0 de teste](https://github.com/Pedrinhocoder/App-da-Emily/raw/refs/heads/codex/amor-cuida-2-0/Amor-Cuida-2.0-debug.apk)
 
